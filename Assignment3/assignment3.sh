@@ -2,7 +2,7 @@
 #SBATCH --job-name=assignment3
 #SBATCH --account=hsreefman
 #SBATCH --error=assignment3.err
-#SBATCH --time=00:2:00
+#SBATCH --time=02:00:00
 #SBATCH --nodes=1
 #SBATCH --partition=assemblix
 #SBATCH --nodelist=assemblix2019
@@ -10,6 +10,10 @@
 
 source /commons/conda/conda_load.sh;
 
-export FILE="/commons/Themas/Thema12/HPC/rnaseq.fastq";
+export FILE1="/data/datasets/rnaseq_data/Brazil_Brain/SPM11_R1.fastq"
+export FILE2="/data/datasets/rnaseq_data/Brazil_Brain/SPM14_R1.fastq"
 
-parallel --jobs 20 --pipepart --block -1 --regexp --recstart '@.*(/1| 1:.*)\n[A-Za-z\n\.~]' --recend '\n' -a $FILE python3 assignment3.py --chunk | python3 assignment3.py --combine;
+# export FILE1="test.fastq"
+# export FILE2="testt.fastq"
+
+parallel -j 20 python assignment3.py {} ::: $FILE1 $FILE2
