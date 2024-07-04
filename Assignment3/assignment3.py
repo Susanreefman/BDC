@@ -8,7 +8,7 @@ __author__ = "hsreefman"
 
 # Imports
 import sys
-
+import os
 
 CHUNK_SIZE = 60
 
@@ -34,23 +34,37 @@ def get_phredscore(chunk_lines):
     Return:
         vertical_list (list):
     """
-    # Flatten the list of lists and compute the lengths
-    lengths = [len(sublist[0]) for sublist in chunk_lines]
-
-    # Find the maximum length
-    max_length = max(lengths)
+    max_length = max(len(line) for line in chunk_lines)
 
     scores = []
     for i in range(max_length):
         score = []
         for line in chunk_lines:
-            line = line[0]
             if i < len(line):
                 score.append(ord(line[i]) - 33)
-
-            scores.append(sum(score) / len(score))
+        scores.append(sum(score) / len(chunk_lines))
 
     return scores
+
+
+def calculate_mean(scores):
+    """
+    Calculates the mean scores of all lines
+    param:
+        scores (list): list with scores
+    return:
+        means (list): list with mean scores
+    """
+    max_length = max(len(score) for score in scores)
+
+    if not all(map(lambda x:len(x) == max_length, scores)):
+        raise ValueError("Quality lines do not have equal length")
+
+    means = []
+    for i in range(max_length):
+        mean = [score[i] for score in scores]
+        means.append(sum(mean) / len(mean))
+    return means
 
 
 def process_file(filename):
@@ -62,7 +76,7 @@ def process_file(filename):
         average (float) or None: The average PHRED score if the process rank is 0, otherwise None.
     """
     with open(filename, 'r') as f:
-        lines = f.readlines()
+        lines = f.read().splitlines()
 
     start_index = get_header(lines)
 
@@ -71,12 +85,19 @@ def process_file(filename):
         quality_lines.append(lines[i])
 
     chunk_lines = []
-    for span in range(0, len(quality_lines), 1):
-        chunk_lines.append(quality_lines[span: span + 1])
+    for span in range(0, len(quality_lines), CHUNK_SIZE):
+        chunk_lines.append(quality_lines[span: span + CHUNK_SIZE])
 
-    scores = get_phredscore(chunk_lines)
+    scores = [get_phredscore(chunk) for chunk in chunk_lines]
 
-    return scores
+    means = calculate_mean(scores)
+
+    output= "\n".join([f"{index}, {score}" for index, score in enumerate(means)])
+
+    f = os.path.basename(filename)
+
+    print(f)
+    print(output)
 
 
 if __name__ == "__main__":
@@ -86,7 +107,4 @@ if __name__ == "__main__":
 
     input_fastq = sys.argv[1]
 
-    avg_phred = process_file(input_fastq)
-
-    print("\n".join([f"{index}, {score}" for index, score in enumerate(avg_phred)]))
-    
+    process_file(input_fastq)
