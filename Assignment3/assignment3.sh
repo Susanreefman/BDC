@@ -13,7 +13,4 @@ source /commons/conda/conda_load.sh;
 export FILE1="/data/datasets/rnaseq_data/Brazil_Brain/SPM11_R1.fastq"
 export FILE2="/data/datasets/rnaseq_data/Brazil_Brain/SPM14_R1.fastq"
 
-# export FILE1="test.fastq"
-# export FILE2="testt.fastq"
-
 parallel -j 20 python assignment3.py {} ::: $FILE1 $FILE2
