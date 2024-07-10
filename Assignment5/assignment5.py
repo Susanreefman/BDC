@@ -14,7 +14,6 @@ import sys
 import io
 import csv
 from contextlib import redirect_stdout
-import pandas
 import pyspark.sql.functions as fun
 from pyspark.sql.window import Window
 from pyspark.sql import SparkSession
@@ -31,11 +30,6 @@ def create_dataframe(input_file):
     return:
         dataframe (spark.DataFrame): dataframe
     """
-    header = ["protein_accession", "seq_MD5_digest", "seq_length", "analysis",
-            "signature_accession", "signature_desc", "start_loc", "stop_loc",
-            "score", "status", "date", "interpro_annot_accession", "interpro_annot_desc",
-            "go_annot", "pathways_annot"]
-
     # Define the schema
     schema = StructType([
         StructField("protein_accession", StringType(), True),
@@ -56,7 +50,7 @@ def create_dataframe(input_file):
     ])
     spark = SparkSession.builder.appName("Interpro").getOrCreate()
     spark_df = spark.read.csv(input_file, sep="\t", schema=schema)
-    print(spark_df.count())
+
     return spark_df
 
 
