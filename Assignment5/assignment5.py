@@ -4,6 +4,8 @@
 Assignment 5 Big Data Computing BFV3
 
 hsreefman
+
+/data/datasets/EBI/interpro/refseq_scan/bacteria.nonredundant_protein.1029.protein.faa.tsv
 """
 
 
@@ -17,6 +19,7 @@ import pyspark.sql.functions as fun
 from pyspark.sql.window import Window
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import avg, desc
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
 
 
 # Functions
@@ -33,11 +36,27 @@ def create_dataframe(input_file):
             "score", "status", "date", "interpro_annot_accession", "interpro_annot_desc",
             "go_annot", "pathways_annot"]
 
-    spark = SparkSession.builder.appName("Interpro") \
-        .master("spark://spark.bin.bioinf.nl:7077").getOrCreate()
-    pd_df = pandas.read_csv(input_file, sep='\t', header=0, names=header)
-    spark_df = spark.createDataFrame(pd_df)
-
+    # Define the schema
+    schema = StructType([
+        StructField("protein_accession", StringType(), True),
+        StructField("seq_MD5_digest", StringType(), True),
+        StructField("seq_length", IntegerType(), True),
+        StructField("analysis", StringType(), True),
+        StructField("signature_accession", StringType(), True),
+        StructField("signature_desc", StringType(), True),
+        StructField("start_loc", IntegerType(), True),
+        StructField("stop_loc", IntegerType(), True),
+        StructField("score", DoubleType(), True),
+        StructField("status", StringType(), True),
+        StructField("date", StringType(), True),
+        StructField("interpro_annot_accession", StringType(), True),
+        StructField("interpro_annot_desc", StringType(), True),
+        StructField("go_annot", StringType(), True),
+        StructField("pathways_annot", StringType(), True)
+    ])
+    spark = SparkSession.builder.appName("Interpro").getOrCreate()
+    spark_df = spark.read.csv(input_file, sep="\t", schema=schema)
+    print(spark_df.count())
     return spark_df
 
 
@@ -89,8 +108,6 @@ def question3(data):
     data = data.where(data.go_annot != "-")
     answer = data.groupBy("go_annot").count().orderBy(desc("count")).first()[0]
     explain = capture_explain(data.groupBy("go_annot").count().orderBy(desc("count")))
-    print(answer)
-    print(explain)
 
     return [answer, explain]
 
@@ -106,8 +123,6 @@ def question4(data):
     data = data.where(data.interpro_annot_accession != "-")
     answer = data.groupBy("interpro_annot_accession").agg({"seq_length": "mean"}).first()[1]
     explain = capture_explain(data.groupBy("interpro_annot_accession").agg({"seq_length": "mean"}))
-    print(answer)
-    print(explain)
 
     return [answer, explain]
 
@@ -222,15 +237,20 @@ def question10(data):
         (list) : answer to the question and explain string in a list
     """
     data = data.where(data.interpro_annot_accession != "-")
-    param = data.select("signature_accession", "seq_length", "interpro_annot_accession") \
-        .withColumn("counts",
-                    fun.count("interpro_annot_accession") \
-                        .over(Window.partitionBy("signature_accession"))) \
-        .dropDuplicates(["signature_accession"])
-    answer = param.stat.corr("seq_length", "counts")
-    explain = capture_explain(param)
+    window = Window.partitionBy("signature_accession")
 
-    return [answer, explain]
+    data_counts = data \
+        .withColumn("counts", fun.count("interpro_annot_accession").over(window)) \
+        .dropDuplicates(["signature_accession"])
+
+    # Convert seq_length and counts to numeric types if they are not
+    data_counts = data_counts.withColumn("seq_length", data_counts["seq_length"].cast("double"))
+    data_counts = data_counts.withColumn("counts", data_counts["counts"].cast("double"))
+
+    correlation = data_counts.stat.corr("seq_length", "counts")
+    explain = data_counts._jdf.queryExecution().toString()
+
+    return [correlation, explain]
 
 
 def output_writer(data):
@@ -251,6 +271,7 @@ def output_writer(data):
 if __name__ == "__main__":
 
     dataframe = create_dataframe(sys.argv[1])
+    print(sys.argv[1])
 
     answers = [question1(dataframe), question2(dataframe),
                question3(dataframe), question4(dataframe),
