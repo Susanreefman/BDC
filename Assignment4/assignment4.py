@@ -45,6 +45,27 @@ def get_phredscore(chunk_lines):
     return scores
 
 
+def calculate_mean(scores):
+    """
+    Calculates the mean scores of all lines
+    param:
+        scores (list): list with scores
+    return:
+        means (list): list with mean scores
+    """
+    max_length = max(len(score) for score in scores)
+
+    if not all(map(lambda x:len(x) == max_length, scores)):
+        raise ValueError("Quality lines do not have equal length")
+
+    means = []
+    for i in range(max_length):
+        mean = [score[i] for score in scores]
+        means.append(sum(mean) / len(mean))
+    return means
+
+
+
 def process_file(filename, comm, rank, size):
     """
     Process files 
@@ -73,10 +94,12 @@ def process_file(filename, comm, rank, size):
     local_scores = get_phredscore(chunk)
     all_scores = comm.gather(local_scores, root=0)
 
+
+
     if rank == 0:
-        all_scores_flat = [score for sublist in all_scores for score in sublist]
-        average = sum(all_scores_flat) / len(all_scores_flat) if all_scores_flat else 0
-        return average
+        means = calculate_mean(all_scores)
+        output= "\n".join([f"{index}, {score}" for index, score in enumerate(means)])
+        return output
     return None
 
 
@@ -98,10 +121,6 @@ def main():
         avg_phred = process_file(filename, comm, rank, size)
         if rank == 0:
             results.append((filename, avg_phred))
-
-    if rank == 0:
-        for filename, avg_phred in results:
-            print(f"file: {filename}, average PHREDscore: {avg_phred}")
 
     return 0
 
