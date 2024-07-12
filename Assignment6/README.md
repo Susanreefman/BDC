@@ -4,11 +4,11 @@ Parallel training neural network on different datasets with different amount of 
 
 Output:
 
-"<dataset file>" 
+"dataset name" 
 
-"<Loss: loss>"
+"Loss: loss"
 
-"<Accuracy: accuracy>"
+"Accuracy: accuracy"
 
 timings.csv - contains information about elapsed time 
 
