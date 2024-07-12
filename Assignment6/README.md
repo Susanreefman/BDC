@@ -21,8 +21,13 @@ bash assignment6.sh
 ## Files
 
 assignment6.sh - bash script 
+
 assignment6.py - python script to train and test neural network
+
 data.py - part of Advanced Datamining course
+
 model.py - contains neural network model
+
 mini_MNIST.dat - images dataset
+
 Sign_MNIST_mini.dat - images dataset
